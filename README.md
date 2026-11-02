@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/hero.jpg" alt="A Miyoo Mini Plus standing next to a keyring, showing two-factor codes in MiniKey" width="100%"></p>
+<p align="center"><img src="docs/hero.jpg" alt="A clear purple Miyoo Mini Plus on a stand showing two-factor codes in MiniKey, on a stone table with a teapot" width="100%"></p>
 
 [![CI](https://github.com/zakijss/MiniKey/actions/workflows/ci.yml/badge.svg)](https://github.com/zakijss/MiniKey/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/zakijss/MiniKey)](https://github.com/zakijss/MiniKey/releases)
@@ -14,7 +14,7 @@ Your 2FA codes (TOTP) on a Miyoo Mini Plus, sealed with the device key and a cod
 - Corrects the codes when the device's clock is off, checked against an HTTPS server.
 
 
-<p align="center"><img src="docs/desk.jpg" alt="MiniKey running on a Miyoo Mini Plus lying on a desk" width="100%"></p>
+<p align="center"><img src="docs/desk.jpg" alt="A grey Miyoo Mini Plus lying on a window sill next to a keyring, showing two-factor codes in MiniKey" width="100%"></p>
 
 ## Using it
 
