@@ -1,0 +1,16 @@
+{
+  "name": "MiniKey",
+  "folder": "MiniKey",
+  "desc": "2FA codes (TOTP), locked with a button code",
+  "repo": "zakijss/MiniKey",
+  "license": "MIT",
+  "version": "__VERSION__",
+  "zip": "https://github.com/zakijss/MiniKey/releases/download/v__VERSION__/minikey-__VERSION__.zip",
+  "sha256": "__SHA256__",
+  "size": __SIZE__,
+  "strip": "App/",
+  "released": "__RELEASED__",
+  "facts": [
+    "Codes are sealed with the device key and your button code; imports are erased after reading."
+  ]
+}

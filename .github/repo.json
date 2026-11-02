@@ -1,0 +1,1 @@
+{"description": "TOTP 2FA codes on a Miyoo Mini Plus (Onion OS), encrypted with the device key and locked with a code pressed on the buttons.", "topics": ["miyoo-mini-plus", "onion-os", "totp", "2fa", "authenticator", "golang"]}

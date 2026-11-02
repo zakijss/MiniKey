@@ -1,0 +1,6 @@
+{
+	"label":	"MiniKey",
+	"icon":	"/mnt/SDCARD/App/MiniKey/icon.png",
+	"launch":	"launch.sh",
+	"description":	"2FA codes, locked with your button code"
+}
