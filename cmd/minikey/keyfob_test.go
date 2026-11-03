@@ -105,6 +105,11 @@ func TestFindAndShred(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "ente-auth-codes.txt"), []byte("otpauth://totp/A?secret=JBSWY3DP\n"), 0644)
 	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("hello"), 0644)
 	os.WriteFile(filepath.Join(dir, ".hidden.txt"), []byte("otpauth://totp/A?secret=JBSWY3DP\n"), 0644)
+	victim := filepath.Join(t.TempDir(), "other.txt")
+	os.WriteFile(victim, []byte("otpauth://totp/x?secret=JBSWY3DP"), 0600)
+	if err := os.Symlink(victim, filepath.Join(dir, "link.txt")); err != nil {
+		t.Fatal(err)
+	}
 	got := findExports([]string{dir, filepath.Join(dir, "missing")})
 	if len(got) != 1 || filepath.Base(got[0]) != "ente-auth-codes.txt" {
 		t.Fatalf("found %v", got)

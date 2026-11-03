@@ -74,7 +74,8 @@ func findExports(dirs []string) []string {
 		}
 		for _, e := range ents {
 			name := e.Name()
-			if e.IsDir() || strings.HasPrefix(name, ".") || !strings.EqualFold(filepath.Ext(name), ".txt") {
+			// regular files only: a symlink could point shred at another file
+			if !e.Type().IsRegular() || strings.HasPrefix(name, ".") || !strings.EqualFold(filepath.Ext(name), ".txt") {
 				continue
 			}
 			p := filepath.Join(d, name)
