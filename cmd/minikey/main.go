@@ -364,7 +364,7 @@ func (a *app) save() bool {
 	var err error
 	a.wait("Saving…", func() { err = saveVault(filepath.Join(a.dir, "vault.enc"), a.devkey, a.code, a.accts) })
 	if err != nil {
-		a.scr.Notice(a.input, "Couldn't save", err.Error())
+		a.scr.Notice(a.input, "Couldn't save", err.Error()+". Check that the card has free space.")
 		return false
 	}
 	return true
@@ -412,7 +412,7 @@ func (a *app) importNew(asked bool) {
 		}
 		gone = append(gone, filepath.Base(f))
 	}
-	body := fmt.Sprintf("Added %d codes", n)
+	body := fmt.Sprintf("Added %d accounts", n)
 	if dup := len(add) - n; dup > 0 {
 		body += fmt.Sprintf(" (%d already here)", dup)
 	}
@@ -654,7 +654,7 @@ func (a *app) settings() bool {
 			a.cfg = a.cfg.change(it.Value, d)
 			if err := saveSettings(a.dir, a.cfg); err != nil {
 				a.cfg = old
-				a.scr.Notice(a.input, "Couldn't save", err.Error())
+				a.scr.Notice(a.input, "Couldn't save", err.Error()+". Check that the card has free space.")
 			}
 		case ev.Button != ui.A:
 			l.Handle(ev)
