@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -140,5 +141,34 @@ func TestSortedList(t *testing.T) {
 	}
 	if !strings.Contains(a.options()[2].Label, "GitHub") {
 		t.Fatalf("Remove names %q", a.options()[2].Label)
+	}
+}
+
+func TestMatching(t *testing.T) {
+	accts := []Account{{Issuer: "GitHub", Name: "alice"}, {Name: "router admin"}, {Issuer: "Gitea", Name: "bob@example.com"}}
+	idx := []int{2, 0, 1}
+	for q, want := range map[string][]int{"": {2, 0, 1}, "git": {2, 0}, "ALICE": {0}, "admin": {1}, "zzz": nil} {
+		if got := matching(accts, idx, q); !slices.Equal(got, want) {
+			t.Errorf("%q: %v, want %v", q, got, want)
+		}
+	}
+}
+
+func TestJump(t *testing.T) {
+	titles := []string{"Apple", "amazon", "Bank", "Cloudflare", "Coinbase", ""}
+	for _, c := range []struct {
+		sel     int
+		forward bool
+		want    int
+	}{
+		{0, true, 2}, {2, true, 3}, {3, true, 5}, {5, true, 5},
+		{4, false, 3}, {3, false, 2}, {2, false, 0}, {1, false, 0}, {0, false, 0},
+	} {
+		if got := jump(titles, c.sel, c.forward, true); got != c.want {
+			t.Errorf("from %d forward %v: %d, want %d", c.sel, c.forward, got, c.want)
+		}
+	}
+	if jump(titles, 2, true, false) != 5 || jump(titles, 2, false, false) != 0 || jump(nil, 0, true, true) != 0 {
+		t.Error("imported order goes to the ends")
 	}
 }

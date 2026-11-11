@@ -18,7 +18,13 @@ Your 2FA codes (TOTP) on a Miyoo Mini Plus, sealed with the device key and a cod
 
 ## Using it
 
-Copy the export into `App/MiniKey/` or the root of the card and open MiniKey; the first time, choose the unlock code. **A** shows a code; **Y** imports more accounts, changes the code or removes an account.
+Copy the export into `App/MiniKey/` or the root of the card and open MiniKey; the first time, choose the unlock code.
+
+- **A** shows a code large; there **UP**/**DOWN** go to the other accounts.
+- **X** searches the names; **B** lists every account again.
+- **L2**/**R2** jump a letter when sorted by name, or to the top and the bottom.
+- **Y** imports more accounts, changes the code, removes an account or opens the options.
+- **SELECT** changes the look; **B** locks.
 
 The card alone opens nothing: the accounts need the key in the device's internal flash and your code. Keep your 2FA backups elsewhere too.
 

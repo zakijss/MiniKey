@@ -138,3 +138,59 @@ func (s Settings) change(row any, d int) Settings {
 	}
 	return s
 }
+
+// matching keeps the positions in idx of the accounts whose service or
+// account name contains q, ignoring case ("" keeps them all).
+func matching(accts []Account, idx []int, q string) []int {
+	if q == "" {
+		return idx
+	}
+	q = strings.ToLower(q)
+	var out []int
+	for _, i := range idx {
+		x := accts[i]
+		if strings.Contains(strings.ToLower(x.Issuer), q) || strings.Contains(strings.ToLower(x.Name), q) {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// jump is the row L2 (back) or R2 (forward) moves to from row sel of a list
+// whose rows are titled titles. Sorted by name, it goes to the first account
+// of the next letter, or back to the first of this letter (of the one before
+// when already there); in imported order, to the first or last row.
+func jump(titles []string, sel int, forward, byName bool) int {
+	last := len(titles) - 1
+	if last < 0 {
+		return 0
+	}
+	sel = min(max(sel, 0), last)
+	if !byName {
+		if forward {
+			return last
+		}
+		return 0
+	}
+	letter := func(i int) string {
+		for _, r := range strings.ToUpper(titles[i]) {
+			return string(r)
+		}
+		return ""
+	}
+	if forward {
+		for i := sel + 1; i <= last; i++ {
+			if letter(i) != letter(sel) {
+				return i
+			}
+		}
+		return last
+	}
+	if sel > 0 && letter(sel-1) != letter(sel) {
+		sel-- // already at the start of a letter: go to the one before
+	}
+	for sel > 0 && letter(sel-1) == letter(sel) {
+		sel--
+	}
+	return sel
+}

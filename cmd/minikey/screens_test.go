@@ -45,4 +45,5 @@ func TestScreens(t *testing.T) {
 	})
 	shot("7-detail-no-next", func(a *app) { a.cfg.HideNext = true; a.detail() })
 	shot("8-list-by-name", func(a *app) { a.cfg.Sort = "name"; a.drawList() })
+	shot("9-list-search", func(a *app) { a.filter = "alice"; a.drawList() })
 }

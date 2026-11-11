@@ -6,6 +6,16 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- X searches the accounts by service or account name, and B lists them all again.
+- L2 and R2 jump to the next or previous letter when the accounts are sorted by name, or to the top and the bottom.
+- On a code's own screen, UP and DOWN go to the other accounts without going back to the list.
+
+### Changed
+
+- The list's footer shows X Search and L2/R2; SELECT still changes the look, and Options has its row.
+
 ## [1.0.2] - 2026-11-08
 
 ### Changed

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -52,6 +53,9 @@ type app struct {
 	accts  []Account
 	list   ui.List
 	cfg    Settings
+	// filter is the X search: only the accounts whose names contain it
+	// are listed ("" lists them all).
+	filter string
 	// skew is how far the device clock is behind internet time, once
 	// checked (codes are only as right as the clock).
 	skew    atomic.Int64
@@ -431,13 +435,17 @@ func (a *app) importNew(asked bool) {
 
 // ---- the codes ----
 
-// index is the position in a.accts of the account on row i of the list,
-// which follows Options › Sort accounts.
-func (a *app) index(i int) int { return order(a.accts, a.cfg.byName())[i] }
+// view is the positions in a.accts of the accounts the list shows: in the
+// order of Options › Sort accounts, and only those the search matches.
+func (a *app) view() []int { return matching(a.accts, order(a.accts, a.cfg.byName()), a.filter) }
+
+// index is the position in a.accts of the account on row i of the list.
+func (a *app) index(i int) int { return a.view()[i] }
 
 func (a *app) items(now time.Time) []ui.Item {
-	out := make([]ui.Item, len(a.accts))
-	for i, j := range order(a.accts, a.cfg.byName()) {
+	v := a.view()
+	out := make([]ui.Item, len(v))
+	for i, j := range v {
 		x := a.accts[j]
 		sub := ""
 		if x.Issuer != "" {
@@ -458,6 +466,9 @@ func (a *app) run() {
 				return
 			}
 			continue
+		}
+		if a.filter != "" && len(a.view()) == 0 {
+			a.filter = "" // its last match was removed
 		}
 		a.drawList()
 		select {
@@ -481,9 +492,23 @@ func (a *app) run() {
 				if !a.settings() {
 					return
 				}
+			case ui.X:
+				if !a.search() {
+					return
+				}
+			case ui.L2, ui.R2:
+				a.list.Sel = jump(a.titles(), a.list.Sel, ev.Button == ui.R2, a.cfg.byName())
 			case ui.Select:
 				a.scr.Appearance(a.input)
-			case ui.B, ui.Menu:
+			case ui.B:
+				if a.filter == "" {
+					return
+				}
+				// back to every account, still on the one selected
+				j := a.index(a.list.Sel)
+				a.filter = ""
+				a.list.Sel = slices.Index(a.view(), j)
+			case ui.Menu:
 				return
 			default:
 				a.list.Handle(ev)
@@ -504,8 +529,18 @@ func (a *app) drawList() {
 	// the selected one's.
 	x := a.accts[a.index(max(a.list.Sel, 0))]
 	period, left := x.Period, x.Left(now)
-	top := s.StaticFrame("MiniKey", fmt.Sprintf("%d accounts · new code in %d s", len(a.accts), left)+a.clockNote(),
-		ui.Hint{Button: "A", Label: "Show"}, ui.Hint{Button: "Y", Label: "Options"}, ui.AppearanceHint, ui.Hint{Button: "B", Label: "Lock"})
+	count := fmt.Sprintf("%d accounts", len(a.accts))
+	jumpHint, back := "Jump", ui.Hint{Button: "B", Label: "Lock"}
+	if a.cfg.byName() {
+		jumpHint = "A-Z"
+	}
+	if a.filter != "" {
+		count = fmt.Sprintf("%d of %d match “%s”", len(a.list.Items), len(a.accts), a.filter)
+		back.Label = "All"
+	}
+	top := s.StaticFrame("MiniKey", ui.Fit(ui.Small, count+fmt.Sprintf(" · new code in %d s", left)+a.clockNote(), ui.W-60),
+		ui.Hint{Button: "A", Label: "Show"}, ui.Hint{Button: "X", Label: "Search"}, ui.Hint{Button: "Y", Label: "Options"},
+		ui.Hint{Button: "L2/R2", Label: jumpHint}, back)
 	col := ui.Text
 	if left <= 5 {
 		col = ui.Warn
@@ -516,16 +551,15 @@ func (a *app) drawList() {
 }
 
 // detail shows the selected code large, with a countdown ring and the next
-// code (unless Options › Next code hides it). It reports false when it
-// closed because nothing was pressed for the auto-lock time, so the caller
-// locks too.
+// code (unless Options › Next code hides it); UP and DOWN go through the
+// other accounts in the list. It reports false when it closed because
+// nothing was pressed for the auto-lock time, so the caller locks too.
 func (a *app) detail() bool {
-	sel := a.list.Sel
-	if sel < 0 || sel >= len(a.accts) {
+	if a.list.Sel < 0 || a.list.Sel >= len(a.view()) {
 		return true
 	}
 	opened := time.Now()
-	x := a.accts[a.index(sel)]
+	x := a.accts[a.index(a.list.Sel)]
 	tick := time.NewTicker(250 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -548,7 +582,7 @@ func (a *app) detail() bool {
 			next := x.Code(now.Add(time.Duration(left) * time.Second))
 			s.TextCenter(cx, card.Min.Y+190, "Next  "+Group(next), ui.Body, ui.Muted)
 		}
-		s.Footer(ui.Hint{Button: "B", Label: "Back"})
+		s.Footer(ui.Hint{Button: "UP/DOWN", Label: "Other accounts"}, ui.Hint{Button: "B", Label: "Back"})
 		s.Present()
 		select {
 		case <-tick.C:
@@ -562,9 +596,45 @@ func (a *app) detail() bool {
 			if ev.Pressed && (ev.Button == ui.B || ev.Button == ui.Menu || ev.Button == ui.A) {
 				return true
 			}
+			if ev.Pressed && (ev.Button == ui.Up || ev.Button == ui.Down) {
+				a.list.Handle(ev)
+				x = a.accts[a.index(a.list.Sel)]
+			}
 			opened = time.Now()
 		}
 	}
+}
+
+// search asks for part of a name and lists only the accounts that have it;
+// an empty search lists them all again. It reports false when the keyboard
+// was left open longer than the auto-lock time, so the caller locks.
+func (a *app) search() bool {
+	opened := time.Now()
+	q, ok := a.scr.Prompt(a.input, "Search accounts", a.filter, "part of a service or account name", false)
+	// The keyboard can't lock itself: whoever closes it after a long wait
+	// may not be the owner, so lock rather than show the codes.
+	if time.Since(opened) > a.cfg.idle() {
+		return false
+	}
+	if !ok {
+		return true
+	}
+	q = strings.TrimSpace(q)
+	if q != "" && len(matching(a.accts, order(a.accts, false), q)) == 0 {
+		a.scr.Notice(a.input, "No matches", "No account has “"+q+"” in its name.")
+		return true
+	}
+	a.filter, a.list.Sel = q, 0
+	return true
+}
+
+// titles are the names of the rows in the list, top to bottom.
+func (a *app) titles() []string {
+	var out []string
+	for _, j := range a.view() {
+		out = append(out, a.accts[j].Title())
+	}
+	return out
 }
 
 // empty is shown while the vault has no accounts; false means exit.
