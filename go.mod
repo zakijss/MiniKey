@@ -2,7 +2,7 @@ module github.com/zakijss/minikey
 
 go 1.27
 
-require github.com/zakijss/minideck v1.0.3
+require github.com/zakijss/minideck v1.1.0
 
 require (
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20261111203624-6bec4215b57b // indirect
