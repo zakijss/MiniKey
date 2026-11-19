@@ -16,6 +16,9 @@ All notable changes are listed here. The format follows
 
 - A notice, a confirmation or the keyboard left open past the auto-lock time now locks MiniKey when closed, instead of showing the codes. A new unlock code or a removal confirmed after such a wait isn't applied.
 - A wrong unlock code is counted before the vault is checked, so switching off during the check doesn't escape the growing wait.
+- The auto-lock can't be beaten from Options: a press after a wait longer than the auto-lock time locks MiniKey before it changes anything, and raising Auto-lock afterwards no longer gets past it. This covers Appearance and the notices opened from Options too.
+- Buttons pressed during the "Try again in N s" wait are dropped instead of being typed into the next code.
+- A vault that can't be read (a card error, not a wrong code) no longer counts as a wrong try.
 
 ## [1.1.1] - 2026-11-12
 

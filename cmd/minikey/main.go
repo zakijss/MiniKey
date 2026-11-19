@@ -5,6 +5,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"image"
 	"log"
@@ -60,22 +61,32 @@ type app struct {
 	// checked (codes are only as right as the clock).
 	skew    atomic.Int64
 	checked atomic.Bool
-	// gap is the longest wait between two presses since the vault opened.
-	// Dialogs (a notice, the keyboard, a new code) wait for a press with no
-	// timer of their own, so a gap longer than the auto-lock time means
-	// whoever closed one may not be the owner.
-	gap atomic.Int64
+	// mustLock is set when a press comes after a wait longer than the
+	// auto-lock time then in effect (idle). Dialogs (a notice, the
+	// keyboard, a new code) wait for a press with no timer of their own,
+	// so whoever closed one may not be the owner. It stays set: raising
+	// Auto-lock afterwards doesn't clear it.
+	mustLock atomic.Bool
+	idle     atomic.Int64 // a.cfg.idle(), for watch
 }
 
-// watch passes the presses on, keeping gap up to date.
+// setCfg changes the settings, and the auto-lock time presses are checked
+// against.
+func (a *app) setCfg(c Settings) {
+	a.cfg = c
+	a.idle.Store(int64(c.idle()))
+}
+
+// watch passes the presses on, setting mustLock first when one comes
+// after too long a wait.
 func (a *app) watch(in <-chan ui.Event) <-chan ui.Event {
 	out := make(chan ui.Event)
 	go func() {
 		defer close(out)
 		last := time.Now()
 		for ev := range in {
-			if d := int64(time.Since(last)); d > a.gap.Load() {
-				a.gap.Store(d)
+			if d := int64(time.Since(last)); d > cmp.Or(a.idle.Load(), int64(idleLock)) {
+				a.mustLock.Store(true)
 			}
 			last = time.Now()
 			out <- ev
@@ -84,9 +95,9 @@ func (a *app) watch(in <-chan ui.Event) <-chan ui.Event {
 	return out
 }
 
-// stale reports whether something waited for a press longer than the
+// stale reports whether a press came after a wait longer than the
 // auto-lock time since the vault opened: MiniKey locks instead of going on.
-func (a *app) stale() bool { return time.Duration(a.gap.Load()) > a.cfg.idle() }
+func (a *app) stale() bool { return a.mustLock.Load() }
 
 // maxSkew is how far off the clock may be before MiniKey corrects for it.
 const maxSkew = 15 * time.Second
@@ -162,8 +173,8 @@ func main() {
 	}
 	defer scr.Close()
 	a := &app{scr: scr, dir: appdir.Dir()}
+	a.setCfg(loadSettings(a.dir))
 	a.input = a.watch(ui.Input())
-	a.cfg = loadSettings(a.dir)
 	exit := ui.Hint{Button: "B", Label: "Exit"}
 
 	if time.Now().Year() < 2025 {
@@ -199,7 +210,7 @@ func main() {
 	} else if !a.unlock(vault) {
 		return
 	}
-	a.gap.Store(0) // the time the code took to type isn't idle time
+	a.mustLock.Store(false) // the time the code took to type isn't idle time
 	a.importNew(false)
 	a.run()
 }
@@ -324,7 +335,7 @@ func (a *app) unlock(vault string) bool {
 		}
 		var accts []Account
 		var err error
-		a.wait("Unlocking…", func() { accts, err = loadVault(vault, a.devkey, code) })
+		a.wait("Unlocking…", func() { accts, err = openVault(vault, a.devkey, code) })
 		if err == nil {
 			if err := resetLockout(lockPath); err != nil {
 				log.Printf("lockout: %v", err)
@@ -333,6 +344,11 @@ func (a *app) unlock(vault string) bool {
 			return true
 		}
 		if err != ErrWrongCode {
+			// the vault couldn't be read: not a wrong code, so the try
+			// doesn't count
+			if err := lk.save(lockPath); err != nil {
+				log.Printf("lockout: %v", err)
+			}
 			a.scr.Message("MiniKey", "Can't read the vault: "+err.Error(), ui.Hint{Button: "B", Label: "Exit"})
 			waitExit(a.input)
 			return false
@@ -344,6 +360,9 @@ func (a *app) unlock(vault string) bool {
 		msg = "That code didn't open the vault."
 	}
 }
+
+// openVault opens the vault: loadVault, or a stand-in in tests.
+var openVault = loadVault
 
 // lockedOut counts down a wait earned by wrong codes. It sleeps rather than
 // watching the wall clock, so setting the clock doesn't end it.
@@ -387,11 +406,17 @@ func (a *app) wait(msg string, fn func()) {
 	}
 }
 
+// drain drops the presses made meanwhile, until none comes for 30 ms:
+// input is watch's relay, which holds none itself and passes them on one at
+// a time.
 func drain(input <-chan ui.Event) {
 	for {
 		select {
-		case <-input:
-		default:
+		case _, ok := <-input:
+			if !ok {
+				return
+			}
+		case <-time.After(30 * time.Millisecond):
 			return
 		}
 	}
@@ -515,7 +540,7 @@ func (a *app) run() {
 				return
 			}
 		case ev, ok := <-a.input:
-			if !ok {
+			if !ok || a.stale() {
 				return
 			}
 			if !ev.Pressed {
@@ -704,8 +729,9 @@ func (a *app) options() []ui.Item {
 	return append(items, ui.AppearanceItem())
 }
 
-// settings is the Y menu; false means exit: it was left untouched for the
-// auto-lock time (after changing the code the vault stays open). The rows
+// settings is the Y menu; false means exit: it, or a dialog opened from
+// it, was left untouched for the auto-lock time (after changing the code
+// the vault stays open). The rows
 // that change a setting step with A and RIGHT, back with LEFT, and the menu
 // stays open; the others close it.
 func (a *app) settings() bool {
@@ -736,6 +762,11 @@ func (a *app) settings() bool {
 			}
 			ev = e
 		}
+		// a press after too long a wait (here or in a dialog opened from
+		// here) locks before it changes anything
+		if a.stale() {
+			return false
+		}
 		if !ev.Pressed {
 			continue
 		}
@@ -757,9 +788,9 @@ func (a *app) settings() bool {
 		switch {
 		case it.Value != nil:
 			old := a.cfg
-			a.cfg = a.cfg.change(it.Value, d)
+			a.setCfg(a.cfg.change(it.Value, d))
 			if err := saveSettings(a.dir, a.cfg); err != nil {
-				a.cfg = old
+				a.setCfg(old)
 				a.scr.Notice(a.input, "Couldn't save", err.Error()+". Check that the card has free space.")
 			}
 		case ev.Button != ui.A:
@@ -769,7 +800,10 @@ func (a *app) settings() bool {
 			a.scr.Appearance(a.input)
 		default:
 			a.option(l.Sel)
-			return true
+			return !a.stale()
+		}
+		if a.stale() {
+			return false
 		}
 		l.Items = a.options()
 		last = time.Now() // after the action: a long one isn't idle time
