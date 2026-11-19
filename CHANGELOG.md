@@ -6,6 +6,17 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-19
+
+### Added
+
+- Options renames the selected account; importing the same export again doesn't add it back under its old name.
+
+### Fixed
+
+- A notice, a confirmation or the keyboard left open past the auto-lock time now locks MiniKey when closed, instead of showing the codes. A new unlock code or a removal confirmed after such a wait isn't applied.
+- A wrong unlock code is counted before the vault is checked, so switching off during the check doesn't escape the growing wait.
+
 ## [1.1.1] - 2026-11-12
 
 ### Changed
@@ -44,7 +55,8 @@ All notable changes are listed here. The format follows
 
 - The first release: `otpauth://` imports, a button unlock code with lockout, the device key, clock correction, and options for the auto-lock time, showing the next code and sorting accounts by name.
 
-[Unreleased]: https://github.com/zakijss/MiniKey/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/zakijss/MiniKey/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/zakijss/MiniKey/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/zakijss/MiniKey/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/zakijss/MiniKey/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/zakijss/MiniKey/compare/v1.0.1...v1.0.2

@@ -10,7 +10,7 @@ Your 2FA codes (TOTP) on a Miyoo Mini Plus, sealed with the device key and a cod
 
 - Imports `otpauth://` links exported from Ente Auth, Aegis or 2FAS, then erases the plain file.
 - An unlock code of 6 to 16 presses of the d-pad and A, B, X, Y; growing waits after wrong codes, kept across restarts.
-- Locks itself after three minutes untouched; **Y > Auto-lock** sets 1, 3, 5 or 10 minutes, and Options also hides the next code or sorts the accounts by name.
+- Locks itself after three minutes untouched, also when a dialog or the keyboard was left open; **Y > Auto-lock** sets 1, 3, 5 or 10 minutes, and Options also hides the next code or sorts the accounts by name.
 - Corrects the codes when the device's clock is off, checked against an HTTPS server.
 
 
@@ -23,7 +23,7 @@ Copy the export into `App/MiniKey/` or the root of the card and open MiniKey; th
 - **A** shows a code large; there **UP**/**DOWN** go to the other accounts.
 - **X** searches the names; **B** lists every account again.
 - **L2**/**R2** jump a letter when sorted by name, or to the top and the bottom.
-- **Y** imports more accounts, changes the code, removes an account or opens the options.
+- **Y** imports more accounts, changes the code, renames or removes an account, or opens the options.
 - **SELECT** changes the look; **B** locks.
 
 The card alone opens nothing: the accounts need the key in the device's internal flash and your code. Keep your 2FA backups elsewhere too.
