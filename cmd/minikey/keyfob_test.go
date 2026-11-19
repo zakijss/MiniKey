@@ -62,6 +62,12 @@ func TestParseExport(t *testing.T) {
 	if n != 2 || len(merged) != 3 || merged[0].Title() != "Cloudflare" {
 		t.Errorf("merge: n=%d %+v", n, merged)
 	}
+	// an account renamed since isn't imported again
+	renamed := accts[0]
+	renamed.Issuer = "Work GitHub"
+	if _, n := Merge([]Account{renamed}, accts[:1]); n != 0 {
+		t.Errorf("renamed account imported again")
+	}
 }
 
 func TestVault(t *testing.T) {

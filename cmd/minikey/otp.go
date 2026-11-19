@@ -35,7 +35,9 @@ func (a Account) Title() string {
 	return a.Name
 }
 
-func (a Account) key() string { return a.Issuer + "\x00" + a.Name + "\x00" + a.Secret }
+// key tells duplicates apart. The issuer isn't part of it, so importing an
+// export again doesn't bring back an account renamed since.
+func (a Account) key() string { return a.Name + "\x00" + a.Secret }
 
 func decodeSecret(s string) ([]byte, error) {
 	s = strings.ToUpper(strings.NewReplacer(" ", "", "-", "", "=", "").Replace(s))

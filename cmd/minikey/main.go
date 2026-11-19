@@ -60,7 +60,33 @@ type app struct {
 	// checked (codes are only as right as the clock).
 	skew    atomic.Int64
 	checked atomic.Bool
+	// gap is the longest wait between two presses since the vault opened.
+	// Dialogs (a notice, the keyboard, a new code) wait for a press with no
+	// timer of their own, so a gap longer than the auto-lock time means
+	// whoever closed one may not be the owner.
+	gap atomic.Int64
 }
+
+// watch passes the presses on, keeping gap up to date.
+func (a *app) watch(in <-chan ui.Event) <-chan ui.Event {
+	out := make(chan ui.Event)
+	go func() {
+		defer close(out)
+		last := time.Now()
+		for ev := range in {
+			if d := int64(time.Since(last)); d > a.gap.Load() {
+				a.gap.Store(d)
+			}
+			last = time.Now()
+			out <- ev
+		}
+	}()
+	return out
+}
+
+// stale reports whether something waited for a press longer than the
+// auto-lock time since the vault opened: MiniKey locks instead of going on.
+func (a *app) stale() bool { return time.Duration(a.gap.Load()) > a.cfg.idle() }
 
 // maxSkew is how far off the clock may be before MiniKey corrects for it.
 const maxSkew = 15 * time.Second
@@ -135,7 +161,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer scr.Close()
-	a := &app{scr: scr, input: ui.Input(), dir: appdir.Dir()}
+	a := &app{scr: scr, dir: appdir.Dir()}
+	a.input = a.watch(ui.Input())
 	a.cfg = loadSettings(a.dir)
 	exit := ui.Hint{Button: "B", Label: "Exit"}
 
@@ -172,6 +199,7 @@ func main() {
 	} else if !a.unlock(vault) {
 		return
 	}
+	a.gap.Store(0) // the time the code took to type isn't idle time
 	a.importNew(false)
 	a.run()
 }
@@ -287,6 +315,13 @@ func (a *app) unlock(vault string) bool {
 		if !ok {
 			return false
 		}
+		// Count the try as wrong until the vault opens, so switching off
+		// during the slow check doesn't escape the count.
+		try := lk
+		try.fail(readClock())
+		if err := try.save(lockPath); err != nil {
+			log.Printf("lockout: %v", err)
+		}
 		var accts []Account
 		var err error
 		a.wait("Unlocking…", func() { accts, err = loadVault(vault, a.devkey, code) })
@@ -302,7 +337,7 @@ func (a *app) unlock(vault string) bool {
 			waitExit(a.input)
 			return false
 		}
-		lk.fail(readClock())
+		lk.fail(readClock()) // the wait starts now, not before the check
 		if err := lk.save(lockPath); err != nil {
 			log.Printf("lockout: %v", err)
 		}
@@ -461,6 +496,9 @@ func (a *app) run() {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
 	for {
+		if a.stale() {
+			return
+		}
 		if len(a.accts) == 0 {
 			if !a.empty() {
 				return
@@ -609,11 +647,8 @@ func (a *app) detail() bool {
 // an empty search lists them all again. It reports false when the keyboard
 // was left open longer than the auto-lock time, so the caller locks.
 func (a *app) search() bool {
-	opened := time.Now()
 	q, ok := a.scr.Prompt(a.input, "Search accounts", a.filter, "part of a service or account name", false)
-	// The keyboard can't lock itself: whoever closes it after a long wait
-	// may not be the owner, so lock rather than show the codes.
-	if time.Since(opened) > a.cfg.idle() {
+	if a.stale() {
 		return false
 	}
 	if !ok {
@@ -662,6 +697,7 @@ func (a *app) options() []ui.Item {
 	items := []ui.Item{
 		{Label: "Import codes", Sub: "From a .txt export on the card", Chevron: true},
 		{Label: "Change unlock code", Chevron: true},
+		{Label: "Rename " + x.Title(), Sub: "The name the list shows", Chevron: true},
 		{Label: "Remove " + x.Title(), Sub: x.Name, Chevron: true},
 	}
 	items = append(items, settingRows(a.cfg)...)
@@ -747,7 +783,7 @@ func (a *app) option(i int) {
 		a.importNew(true)
 	case 1:
 		code, ok := a.newCode("Choose a new unlock code")
-		if !ok {
+		if !ok || a.stale() {
 			return
 		}
 		old := a.code
@@ -759,8 +795,20 @@ func (a *app) option(i int) {
 		a.scr.Notice(a.input, "MiniKey", "Unlock code changed.")
 	case 2:
 		j := a.index(a.list.Sel)
+		name, ok := a.scr.Prompt(a.input, "Rename account", a.accts[j].Title(), "the service's name", false)
+		if !ok || a.stale() || name == "" || name == a.accts[j].Title() {
+			return
+		}
+		old := a.accts
+		a.accts = slices.Clone(old)
+		a.accts[j].Issuer = name
+		if !a.save() {
+			a.accts = old
+		}
+	case 3:
+		j := a.index(a.list.Sel)
 		x := a.accts[j]
-		if !a.scr.Confirm(a.input, "Remove "+x.Title()+"?", "Its codes will be gone from this device. Make sure you can still sign in another way.", "Remove") {
+		if !a.scr.Confirm(a.input, "Remove "+x.Title()+"?", "Its codes will be gone from this device. Make sure you can still sign in another way.", "Remove") || a.stale() {
 			return
 		}
 		old := a.accts

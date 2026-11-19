@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/zakijss/minideck/ui"
 )
 
 func TestFailWait(t *testing.T) {
@@ -90,5 +92,49 @@ func TestLockoutClockJumps(t *testing.T) {
 	l.Until = c.wall.Add(1000 * time.Hour) // written with the clock far ahead
 	if got := l.remaining(clock{wall: c.wall, boot: "b2"}); got != maxWait {
 		t.Errorf("record from the future: %v left", got)
+	}
+}
+
+// A wrong code is on the card before the next try, and the right one
+// clears it.
+func TestUnlockCounts(t *testing.T) {
+	scr, _ := lookScreen(t)
+	dir := t.TempDir()
+	dev := []byte("device key")
+	if err := saveVault(filepath.Join(dir, "vault.enc"), dev, "UDLRAB", lookAccts); err != nil {
+		t.Fatal(err)
+	}
+	a := &app{scr: scr, dir: dir, devkey: dev}
+	lockPath := filepath.Join(dir, "lockout.json")
+	a.input = presses(ui.Up, ui.Down, ui.Left, ui.Right, ui.A, ui.A, ui.Start)
+	if a.unlock(filepath.Join(dir, "vault.enc")) {
+		t.Fatal("opened with the wrong code")
+	}
+	if l := loadLockout(lockPath, readClock()); l.Fails != 1 {
+		t.Fatalf("after a wrong code: %+v", l)
+	}
+	a.input = presses(ui.Up, ui.Down, ui.Left, ui.Right, ui.A, ui.B, ui.Start)
+	if !a.unlock(filepath.Join(dir, "vault.enc")) || len(a.accts) != len(lookAccts) {
+		t.Fatal("didn't open with the right code")
+	}
+	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+		t.Errorf("count kept after the right code: %v", err)
+	}
+}
+
+// After a dialog waited longer than the auto-lock time, MiniKey locks
+// rather than showing the codes to whoever pressed a button.
+func TestStaleLocks(t *testing.T) {
+	scr, _ := lookScreen(t)
+	a := &app{scr: scr, accts: lookAccts, input: presses(ui.A)}
+	a.gap.Store(int64(idleLock + time.Second))
+	a.run()
+	if len(a.input) != 1 {
+		t.Error("went on after a long wait")
+	}
+	a.gap.Store(int64(time.Second))
+	a.run()
+	if len(a.input) != 0 {
+		t.Error("locked after a short wait")
 	}
 }

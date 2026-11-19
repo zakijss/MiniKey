@@ -121,8 +121,8 @@ func TestSortedList(t *testing.T) {
 	scr, _ := lookScreen(t)
 	dir := t.TempDir()
 	a := &app{scr: scr, dir: dir, accts: append([]Account(nil), lookAccts...)}
-	// Y, then down to Sort accounts (the sixth row) and RIGHT
-	a.input = presses(ui.Y, ui.Down, ui.Down, ui.Down, ui.Down, ui.Down, ui.Right, ui.B)
+	// Y, then down to Sort accounts (the seventh row) and RIGHT
+	a.input = presses(ui.Y, ui.Down, ui.Down, ui.Down, ui.Down, ui.Down, ui.Down, ui.Right, ui.B)
 	a.run()
 	if !a.cfg.byName() || !loadSettings(dir).byName() {
 		t.Fatalf("sort not saved: %+v", a.cfg)
@@ -139,8 +139,8 @@ func TestSortedList(t *testing.T) {
 	if a.list.Sel = 0; a.accts[a.index(0)].Issuer != "GitHub" {
 		t.Fatal("row 0 isn't GitHub")
 	}
-	if !strings.Contains(a.options()[2].Label, "GitHub") {
-		t.Fatalf("Remove names %q", a.options()[2].Label)
+	if !strings.Contains(a.options()[3].Label, "Remove GitHub") {
+		t.Fatalf("Remove names %q", a.options()[3].Label)
 	}
 }
 
