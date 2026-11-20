@@ -9,12 +9,17 @@
 Your 2FA codes (TOTP) on a Miyoo Mini Plus, sealed with the device key and a code you press on the buttons. Part of [MiniDeck](https://github.com/zakijss/MiniDeck).
 
 - Imports `otpauth://` links exported from Ente Auth, Aegis or 2FAS, then erases the plain file.
-- An unlock code of 6 to 16 presses of the d-pad and A, B, X, Y; growing waits after wrong codes, kept across restarts.
-- Locks itself after three minutes untouched, also when a dialog or the keyboard was left open; **Y > Auto-lock** sets 1, 3, 5 or 10 minutes, and Options also hides the next code or sorts the accounts by name.
+- An unlock code of 6 to 16 presses of the d-pad and A, B, X, Y, with growing waits after wrong codes, kept across restarts.
+- Locks itself after three minutes untouched, even with a dialog or the keyboard left open.
 - Corrects the codes when the device's clock is off, checked against an HTTPS server.
 
-
 <p align="center"><img src="docs/desk.jpg" alt="A grey Miyoo Mini Plus lying on a window sill next to a keyring, showing two-factor codes in MiniKey" width="100%"></p>
+
+## Install
+
+Open [MiniMart](https://github.com/zakijss/MiniMart) and pick **Apps > MiniKey**: it checks the download and keeps your settings on updates. Or unzip `minikey-VERSION.zip` from [Releases](https://github.com/zakijss/MiniKey/releases/latest) onto the root of the SD card and restart. Every MiniDeck app comes in one zip too: [minideck-all.zip](https://github.com/zakijss/MiniDeck/releases/latest/download/minideck-all.zip).
+
+Needs a Miyoo Mini Plus on Onion OS 4.4, with Wi-Fi. Other devices and firmwares aren't supported.
 
 ## Using it
 
@@ -23,20 +28,12 @@ Copy the export into `App/MiniKey/` or the root of the card and open MiniKey; th
 - **A** shows a code large; there **UP**/**DOWN** go to the other accounts.
 - **X** searches the names; **B** lists every account again.
 - **L2**/**R2** jump a letter when sorted by name, or to the top and the bottom.
-- **Y** imports more accounts, changes the code, renames or removes an account, or opens the options.
+- **Y** imports more accounts, changes the code, renames or removes an account, or opens Options: auto-lock after 1, 3, 5 or 10 minutes, hide the next code, sort by name.
 - **SELECT** changes the look; **B** locks.
 
+## Security
+
 The card alone opens nothing: the accounts need the key in the device's internal flash and your code. Keep your 2FA backups elsewhere too.
-
-## Install
-
-- **MiniMart:** open [MiniMart](https://github.com/zakijss/MiniMart), then **Apps > MiniKey**. It checks the download and keeps your settings on updates.
-- **Zip:** download `minikey-VERSION.zip` from [Releases](https://github.com/zakijss/MiniKey/releases/latest), unzip it onto the root of the SD card, and restart.
-- **Every MiniDeck app at once:** [minideck-all.zip](https://github.com/zakijss/MiniDeck/releases/latest/download/minideck-all.zip).
-
-## Requirements
-
-A Miyoo Mini Plus on Onion OS 4.4, with Wi-Fi. Other devices and firmwares aren't supported.
 
 ## Building
 
