@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/hero.jpg" alt="A clear purple Miyoo Mini Plus on a stand on a sunlit window sill, listing two-factor codes in MiniKey, with a grey one and a white one lying beside it" width="100%"></p>
+<p align="center"><img src="docs/hero.jpg" alt="A clear purple Miyoo Mini Plus on a steel stand listing two-factor codes in MiniKey, on a steel plate in a bank vault, with a grey one, a pocket watch and a magnifying glass" width="100%"></p>
 
 [![CI](https://github.com/zakijss/MiniKey/actions/workflows/ci.yml/badge.svg)](https://github.com/zakijss/MiniKey/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/zakijss/MiniKey)](https://github.com/zakijss/MiniKey/releases)
@@ -13,7 +13,7 @@ Your 2FA codes (TOTP) on a Miyoo Mini Plus, sealed with the device key and a cod
 - Locks itself after three minutes untouched, even with a dialog or the keyboard left open.
 - Corrects the codes when the device's clock is off, checked against an HTTPS server.
 
-<p align="center"><img src="docs/desk.jpg" alt="A clear purple Miyoo Mini Plus on a stand on a sunlit window sill, listing two-factor codes in MiniKey, with a grey one beside it showing one account" width="100%"></p>
+<p align="center"><img src="docs/desk.jpg" alt="Close up: a white Miyoo Mini Plus on a steel stand asking for its unlock code in MiniKey, in a bank vault, a pocket watch beside it" width="100%"></p>
 
 ## Install
 
